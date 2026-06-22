@@ -1,40 +1,50 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-function Ring({ innerR, outerR, segments, speed, color, opacity, y = 0 }) {
+function PrecessionRing({ radius, tube, segments, speedY, speedX, color, opacity, tilt }) {
   const ref = useRef()
   useFrame((state) => {
     if (!ref.current) return
-    ref.current.rotation.z = state.clock.elapsedTime * speed
+    const t = state.clock.elapsedTime
+    ref.current.rotation.y = t * speedY
+    ref.current.rotation.x = tilt + Math.sin(t * 0.15) * 0.03
   })
   return (
-    <mesh ref={ref} rotation={[Math.PI / 2, 0, 0]} position={[0, y, 0]}>
-      <ringGeometry args={[innerR, outerR, segments]} />
+    <mesh ref={ref}>
+      <torusGeometry args={[radius, tube, 3, segments]} />
       <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} />
     </mesh>
   )
 }
 
-function DotRing({ radius, count, color, speed, y = 0 }) {
+function DotOrbit({ radius, count, color, speedY, size, tilt }) {
   const ref = useRef()
+  const positions = useMemo(() => {
+    const pos = []
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2
+      pos.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius))
+    }
+    return pos
+  }, [radius, count])
+
   useFrame((state) => {
     if (!ref.current) return
-    ref.current.rotation.z = state.clock.elapsedTime * speed
+    ref.current.rotation.y = state.clock.elapsedTime * speedY
+    ref.current.rotation.x = tilt
   })
 
-  const positions = []
-  for (let i = 0; i < count; i++) {
-    const angle = (i / count) * Math.PI * 2
-    positions.push([Math.cos(angle) * radius, 0, Math.sin(angle) * radius])
-  }
-
   return (
-    <group ref={ref} rotation={[Math.PI / 2, 0, 0]} position={[0, y, 0]}>
+    <group ref={ref}>
       {positions.map((pos, i) => (
         <mesh key={i} position={pos}>
-          <sphereGeometry args={[0.015, 8, 8]} />
-          <meshBasicMaterial color={color} />
+          <sphereGeometry args={[size, 8, 8]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={2}
+          />
         </mesh>
       ))}
     </group>
@@ -44,14 +54,14 @@ function DotRing({ radius, count, color, speed, y = 0 }) {
 export default function MandalaRing() {
   return (
     <group>
-      <Ring innerR={1.6} outerR={1.62} segments={64} speed={0.08} color="#c9a227" opacity={0.6} />
-      <Ring innerR={2.0} outerR={2.02} segments={64} speed={-0.06} color="#00e5ff" opacity={0.4} />
-      <Ring innerR={2.4} outerR={2.42} segments={64} speed={0.05} color="#c9a227" opacity={0.3} />
-      <Ring innerR={3.0} outerR={3.02} segments={64} speed={-0.04} color="#f0d060" opacity={0.25} />
-      <Ring innerR={3.6} outerR={3.62} segments={64} speed={0.03} color="#e8e0ff" opacity={0.2} />
-      <DotRing radius={1.8} count={24} color="#c9a227" speed={0.1} />
-      <DotRing radius={2.2} count={32} color="#00e5ff" speed={-0.07} />
-      <DotRing radius={3.3} count={48} color="#f0d060" speed={0.04} />
+      <PrecessionRing radius={1.8} tube={0.006} segments={128} speedY={0.14}  speedX={0.02} color="#c9a227" opacity={0.6} tilt={0} />
+      <PrecessionRing radius={2.2} tube={0.005} segments={128} speedY={-0.10} speedX={0.015} color="#00e5ff" opacity={0.45} tilt={0.1} />
+      <PrecessionRing radius={2.6} tube={0.004} segments={128} speedY={0.08}  speedX={0.01} color="#c9a227" opacity={0.3} tilt={0.2} />
+      <PrecessionRing radius={3.1} tube={0.003} segments={128} speedY={-0.07} speedX={0.02} color="#f0d060" opacity={0.2} tilt={-0.1} />
+      <PrecessionRing radius={3.8} tube={0.002} segments={128} speedY={0.05}  speedX={0.01} color="#e8e0ff" opacity={0.15} tilt={0.05} />
+      <DotOrbit radius={2.0} count={36} color="#c9a227" speedY={0.16} size={0.016} tilt={0} />
+      <DotOrbit radius={2.4} count={48} color="#00e5ff" speedY={-0.12} size={0.012} tilt={0.15} />
+      <DotOrbit radius={3.4} count={64} color="#f0d060" speedY={0.07} size={0.009} tilt={-0.1} />
     </group>
   )
 }
